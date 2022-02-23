@@ -78,6 +78,7 @@ class KeyValue(BitmapTask):
         o_p = np.zeros((2*length+2, self.key_w), dtype=np.float32)
         o_p[length+1:-1] = values_perm
 
+        return i_p, o_p
         return self.transform({
             "input": i_p,
             "output": o_p

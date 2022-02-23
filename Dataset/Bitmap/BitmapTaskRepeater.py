@@ -28,10 +28,9 @@ class BitmapTaskRepeater(BitmapTask):
         if len(r)==1:
             return r[0]
         else:
-            return {
-                "input": np.concatenate([a["input"] for a in r], axis=0),
-                "output": np.concatenate([a["output"] for a in r], axis=0)
-            }
+            inx   = np.concatenate([i for i, l in r], axis=0),
+            label = np.concatenate([i for i, l in r], axis=0)
+            return inx, label
 
     @staticmethod
     def key_sampler(length, repeat):

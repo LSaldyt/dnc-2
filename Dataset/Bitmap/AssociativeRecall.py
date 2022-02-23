@@ -59,6 +59,7 @@ class AssociativeRecall(BitmapTask):
         target = np.zeros_like(d)
         target[-self.block_w:] = d[(ti+1) * stride: (ti+2) * stride-1]
 
+        return d, target
         return self.transform({
             "input": d,
             "output": target

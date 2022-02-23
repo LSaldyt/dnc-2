@@ -86,6 +86,7 @@ class KeyValue2Way(BitmapTask):
         i_p[2 * length + 1, -1] = 1
         i_p[-1, -2:] = 1
 
+        return i_p, o_p
         return self.transform({
             "input": i_p,
             "output": o_p
