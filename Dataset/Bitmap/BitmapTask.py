@@ -34,7 +34,8 @@ class BitmapTask(torch.utils.data.Dataset):
         return self.datapoints
 
     def visualize_preview(self, data, net_output):
-        img = visualize_bitmap_task(data["input"], [data["output"], U.sigmoid(net_output)])
+        img = visualize_bitmap_task(data["input"], [data["output"],
+            U.sigmoid(net_output)])
         self._img.draw(img)
 
     def loss(self, net_output, target):

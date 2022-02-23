@@ -21,7 +21,6 @@ import torch.nn.init as init
 import functools
 import math
 
-
 def oneplus(t):
     return F.softplus(t, 1, 20) + 1.0
 

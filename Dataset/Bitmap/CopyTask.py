@@ -44,7 +44,7 @@ class CopyData(BitmapTask):
 
         i_p = np.concatenate((d, z), axis=0)
         o_p = np.concatenate((z,d), axis=0)
-
+        return i_p, o_p
         return self.transform({
             "input" : i_p,
             "output": o_p

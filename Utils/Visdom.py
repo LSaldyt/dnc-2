@@ -15,7 +15,7 @@
 # ==============================================================================
 
 import time
-import visdom
+# import visdom
 import sys
 import numpy as np
 import os
