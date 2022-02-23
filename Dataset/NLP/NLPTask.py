@@ -18,8 +18,8 @@ import torch
 import torch.nn.functional as F
 import os
 from .Vocabulary import Vocabulary
-from Utils import Visdom
-from Utils import universal as U
+from ...Utils import Visdom
+from ...Utils import universal as U
 
 class NLPTask(torch.utils.data.Dataset):
     def __init__(self):

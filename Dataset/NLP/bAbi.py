@@ -20,7 +20,7 @@ import torch
 from collections import namedtuple
 import numpy as np
 from .NLPTask import NLPTask
-from Utils import Visdom
+from ...Utils import Visdom
 
 Sentence = namedtuple('Sentence', ['sentence', 'answer', 'supporting_facts'])
 

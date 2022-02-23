@@ -16,7 +16,7 @@
 
 import numpy as np
 from .BitmapTask import BitmapTask
-from Utils.Seed import get_randstate
+from ...Utils.Seed import get_randstate
 
 class CopyData(BitmapTask):
     def __init__(self, length=None, bit_w=8, transform=lambda x:x):

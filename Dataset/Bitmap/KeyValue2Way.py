@@ -17,7 +17,7 @@
 import math
 import numpy as np
 from .BitmapTask import BitmapTask
-from Utils.Seed import get_randstate
+from ...Utils.Seed import get_randstate
 
 
 class KeyValue2Way(BitmapTask):

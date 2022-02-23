@@ -16,15 +16,14 @@
 
 import torch
 import torch.nn.functional as F
-from Visualize.BitmapTask import visualize_bitmap_task
-from Utils import Visdom
-from Utils import universal as U
+from ...Utils import Visdom
+from ...Utils import universal as U
 
+from ...Visualize.BitmapTask import visualize_bitmap_task
 
 class BitmapTask(torch.utils.data.Dataset):
     def __init__(self):
         super(BitmapTask, self).__init__()
-
         self._img = Visdom.Image("preview")
 
     def set_dump_dir(self, dir):

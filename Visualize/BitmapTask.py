@@ -20,7 +20,7 @@ try:
 except:
     cv2=None
 
-from Utils.Helpers import as_numpy
+from ..Utils.Helpers import as_numpy
 
 def visualize_bitmap_task(i_data, o_data, zoom=8):
     if not isinstance(o_data, list):
