@@ -21,9 +21,9 @@ from ...Utils.Seed import get_randstate
 
 
 class KeyValue(BitmapTask):
-    def __init__(self, length=None, bit_w=8, transform=lambda x: x):
+    def __init__(self, datapoints, length=None, bit_w=8, transform=lambda x: x):
         assert bit_w % 2 == 0, "bit_w must be even"
-        super(KeyValue, self).__init__()
+        super(KeyValue, self).__init__(datapoints)
         self.length = length
         self.bit_w = bit_w
         self.transform = transform

@@ -27,7 +27,7 @@ Sentence = namedtuple('Sentence', ['sentence', 'answer', 'supporting_facts'])
 class bAbiDataset(NLPTask):
     URL = 'http://www.thespermwhale.com/jaseweston/babi/tasks_1-20_v1-2.tar.gz'
     DIR_NAME = "tasks_1-20_v1-2"
-    
+
     def __init__(self, dirs = ["en-10k"], sets=None, think_steps=0, dir_name=None, name=None):
         super(bAbiDataset, self).__init__()
 
@@ -127,18 +127,18 @@ class bAbiDataset(NLPTask):
         else:
             res = torch.load(cache_file)
         return res
-            
+
     def _download(self):
         if not os.path.isdir(os.path.join(self.cache_dir, self.DIR_NAME)):
             print(self.URL)
             print("bAbi data not found. Downloading...")
             import requests, tarfile, io
             request = requests.get(self.URL, headers={"User-agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.80 Safari/537.36"})
-            
+
             decompressed_file = tarfile.open(fileobj=io.BytesIO(request.content), mode='r|gz')
             decompressed_file.extractall(self.cache_dir)
             print("Done")
-     
+
     def _load_dir(self, directory, parse_name = lambda x: x.split(".")[0], parse_set = lambda x: x.split(".")[0].split("_")[-1]):
         res = {}
         for f in glob.glob(os.path.join(directory, '**', '*.txt'), recursive=True):
@@ -152,13 +152,13 @@ class bAbiDataset(NLPTask):
                 s = {}
                 res[set] = s
             s[task_name] = self._load_task(f, task_name)
-            
+
         return res
-    
+
     def _load_task(self, filename, task_name):
         task = []
         currTask = []
-        
+
         nextIndex = 1
         with open(filename, "r") as f:
             for line in f:
@@ -166,7 +166,7 @@ class bAbiDataset(NLPTask):
                 line[0] = line[0].split(" ")
                 i = int(line[0][0])
                 line[0] = " ".join(line[0][1:])
-                
+
                 if i!=nextIndex:
                     nextIndex = i
                     task.append(currTask)
@@ -177,7 +177,7 @@ class bAbiDataset(NLPTask):
                     Sentence(self.vocabulary.sentence_to_indices(line[0]), self.vocabulary.sentence_to_indices(line[1].replace(",", " "))
                             if isQuestion else None, [int(f) for f in line[2].split(" ")] if isQuestion else None)
                 )
-                
+
                 nextIndex += 1
         return task
 

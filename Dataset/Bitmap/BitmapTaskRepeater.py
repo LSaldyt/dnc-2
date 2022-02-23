@@ -19,8 +19,8 @@ import random
 from .BitmapTask import BitmapTask
 
 class BitmapTaskRepeater(BitmapTask):
-    def __init__(self, dataset):
-        super(BitmapTaskRepeater, self).__init__()
+    def __init__(self, datapoints, dataset):
+        super(BitmapTaskRepeater, self).__init__(datapoints)
         self.dataset = dataset
 
     def __getitem__(self, key):

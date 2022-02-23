@@ -22,15 +22,16 @@ from ...Utils import universal as U
 from ...Visualize.BitmapTask import visualize_bitmap_task
 
 class BitmapTask(torch.utils.data.Dataset):
-    def __init__(self):
+    def __init__(self, datapoints):
         super(BitmapTask, self).__init__()
         self._img = Visdom.Image("preview")
+        self.datapoints = datapoints
 
     def set_dump_dir(self, dir):
         self._img.set_dump_dir(dir)
 
     def __len__(self):
-        return 0x7FFFFFFF
+        return self.datapoints
 
     def visualize_preview(self, data, net_output):
         img = visualize_bitmap_task(data["input"], [data["output"], U.sigmoid(net_output)])

@@ -19,8 +19,8 @@ from .BitmapTask import BitmapTask
 from ...Utils.Seed import get_randstate
 
 class AssociativeRecall(BitmapTask):
-    def __init__(self, length=None, bit_w=8, block_w=3, transform=lambda x: x):
-        super(AssociativeRecall, self).__init__()
+    def __init__(self, datapoints, length=None, bit_w=8, block_w=3, transform=lambda x: x):
+        super(AssociativeRecall, self).__init__(datapoints)
         self.length = length
         self.bit_w = bit_w
         self.block_w = block_w

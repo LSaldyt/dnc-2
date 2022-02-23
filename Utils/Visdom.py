@@ -26,7 +26,6 @@ vis = None
 port = None
 visdom_fail_count = 0
 
-
 def port_used(port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     result = sock.connect_ex(('127.0.0.1', port))
@@ -57,6 +56,7 @@ def wait_for_port(port, timeout=5):
 
 
 def start(on_port=None):
+    return
     global vis
     global port
     global visdom_fail_count
