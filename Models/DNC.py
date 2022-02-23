@@ -42,7 +42,6 @@ def split_tensor(src, shapes):
 def dict_get(dict,name):
     return dict.get(name) if dict is not None else None
 
-
 def dict_append(dict, name, val):
     if dict is not None:
         l = dict.get(name)
@@ -50,7 +49,6 @@ def dict_append(dict, name, val):
             l = []
             dict[name] = l
         l.append(val)
-
 
 def init_debug(debug, initial):
     if debug is not None and not debug:
@@ -541,6 +539,43 @@ class DNC(torch.nn.Module):
         self.memory = self.zero_mem_tensor
 
     def forward(self, in_data, debug=None):
+
+        '''
+        torch.Size([256, 18, 9])
+        Aliases for entries in sys.path:
+            <sitepkg>: /home/lsaldyt/.cache/pypoetry/virtualenvs/exps-1RFBYMgc-py3.9/lib/python3.9/site-packages
+            <p0>     : /home/lsaldyt/jaxex
+        Traceback (most recent call last):
+            <p0>/jaxex/torch_wrapper.py           forward        30: self.net.init_sequence(batch_size)
+            <sitepkg>/torch/nn/modules/module.py  __getattr__  1177: raise AttributeError("'{}' object has no attribute '{}'".format(
+        AttributeError: 'DNC' object has no attribute 'init_sequence'
+
+        During handling of the above exception, another exception occurred:
+
+        Aliases for entries in sys.path:
+            <sitepkg>: /home/lsaldyt/.cache/pypoetry/virtualenvs/exps-1RFBYMgc-py3.9/lib/python3.9/site-packages
+            <pwd>    : /home/lsaldyt/hierarchical_neural_synthesis
+            <p0>     : /home/lsaldyt/jaxex
+        Traceback (most recent call last):
+            <pwd>/main.py                            <module>      36: main(sys.argv[1:])
+            <pwd>/main.py                            main          31: registry.run(name)
+            <p0>/jaxex/registry.py                   run           13: return self.experiments[name].run()
+            <p0>/jaxex/tensor_net_experiment.py      run           98: self.loop(self.settings.repeats, self.settings.epochs, train_loader, kind='train')
+            <p0>/jaxex/tensor_net_experiment.py      loop          41: metrics = model.step(x, y)
+            <p0>/jaxex/torch_wrapper.py              step          52: y_out = self.forward(x, y)
+            <p0>/jaxex/torch_wrapper.py              forward       41: return self.net(x)
+            <sitepkg>/torch/nn/modules/module.py     _call_impl  1102: return forward_call(*input, **kwargs)
+            <pwd>/baselines/dnc/Models/DNC.py        forward      555: out_tsteps.append(self._step(in_data[:,t], debug))
+            <pwd>/baselines/dnc/Models/DNC.py        _step        505: control_data = self.controller(torch.cat([in_data, prev_read_data], -1))
+            <sitepkg>/torch/nn/modules/module.py     _call_impl  1102: return forward_call(*input, **kwargs)
+            <pwd>/baselines/dnc/Models/DNC.py        forward      675: return self.model(data)
+            <sitepkg>/torch/nn/modules/module.py     _call_impl  1102: return forward_call(*input, **kwargs)
+            <sitepkg>/torch/nn/modules/container.py  forward      141: input = module(input)
+            <sitepkg>/torch/nn/modules/module.py     _call_impl  1102: return forward_call(*input, **kwargs)
+            <sitepkg>/torch/nn/modules/linear.py     forward      103: return F.linear(input, self.weight, self.bias)
+            <sitepkg>/torch/nn/functional.py         linear      1848: return torch._C._nn.linear(input, weight, bias)
+        RuntimeError: mat1 and mat2 shapes cannot be multiplied (256x137 and 146x32)
+        '''
         self.write_head.new_sequence()
         self.read_head.new_sequence()
         self.temporal_link.new_sequence()
@@ -603,7 +638,8 @@ class LSTMController(torch.nn.Module):
 
         # Xavier init: input to all gates is layers_sizes[i-1] + layer_sizes[i] + input_size -> layer_size big.
         # So use xavier init according to this.
-        self.input_sizes = [(self.layer_sizes[i - 1] if i>0 else 0) + self.layer_sizes[i] + input_size
+        self.input_sizes = [(self.layer_sizes[i - 1] if i>0 else 0) + 
+                             self.layer_sizes[i] + input_size
                             for i in range(len(self.layer_sizes))]
         self.stdevs = [math.sqrt(2.0 / (self.layer_sizes[i] + self.input_sizes[i])) for i in range(len(self.layer_sizes))]
         self.in_to_all= [torch.nn.Linear(input_size, 4*self.layer_sizes[i]) for i in range(len(self.layer_sizes))]
@@ -664,7 +700,6 @@ class FeedforwardController(torch.nn.Module):
         # Xavier init: input to all gates is layers_sizes[i-1] + layer_sizes[i] + input_size -> layer_size big.
         # So use xavier init according to this.
         self.input_sizes = [input_size] + self.layer_sizes[:-1]
-
         layers = []
         for i, size in enumerate(self.layer_sizes):
             layers.append(torch.nn.Linear(self.input_sizes[i], self.layer_sizes[i]))

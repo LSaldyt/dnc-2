@@ -44,6 +44,7 @@ class CopyData(BitmapTask):
 
         i_p = np.concatenate((d, z), axis=0)
         o_p = np.concatenate((z,d), axis=0)
+        i_p = i_p * 2.0 - 1.0 #???
         return i_p, o_p
         return self.transform({
             "input" : i_p,
