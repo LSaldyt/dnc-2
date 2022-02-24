@@ -433,7 +433,6 @@ def main():
             input = embedding(input["input"])
         else:
             input = input["input"] * 2.0 - 1.0
-
         return model(input, debug=debug)
 
     def multiply_grads(params, mul):
