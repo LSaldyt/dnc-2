@@ -464,12 +464,10 @@ class DNC(torch.nn.Module):
         self.temporal_link = TemporalMemoryLinkage()
         self.sharpness_control = DistSharpnessEnhancer([n_read_heads, n_read_heads]) if link_sharpness_control else None
 
-        in_size = input_size + n_read_heads * word_length
         control_channels = self.read_head.get_neural_input_size() + self.write_head.get_neural_input_size() +\
                            (self.sharpness_control.get_neural_input_size() if self.sharpness_control is not None else 0)
 
         self.controller = controller
-        controller.init(in_size)
         self.controller_to_controls = torch.nn.Linear(controller.get_output_size(), control_channels, bias=bias)
         self.controller_to_out = torch.nn.Linear(controller.get_output_size(), output_size, bias=bias)
         self.read_to_out = torch.nn.Linear(word_length * n_read_heads, output_size, bias=bias)
@@ -478,16 +476,16 @@ class DNC(torch.nn.Module):
         self.word_length = word_length
 
         self.memory = None
-        self.reset_parameters()
 
         self.batch_first = batch_first
         self.zero_mem_tensor = None
+        self.init()
 
-    def reset_parameters(self):
+    def init(self):
         linear_reset(self.controller_to_controls)
         linear_reset(self.controller_to_out)
         linear_reset(self.read_to_out)
-        self.controller.reset_parameters()
+        self.controller.init()
 
     def _step(self, in_data, debug):
         init_debug(debug, {
@@ -539,43 +537,6 @@ class DNC(torch.nn.Module):
         self.memory = self.zero_mem_tensor
 
     def forward(self, in_data, debug=None):
-
-        '''
-        torch.Size([256, 18, 9])
-        Aliases for entries in sys.path:
-            <sitepkg>: /home/lsaldyt/.cache/pypoetry/virtualenvs/exps-1RFBYMgc-py3.9/lib/python3.9/site-packages
-            <p0>     : /home/lsaldyt/jaxex
-        Traceback (most recent call last):
-            <p0>/jaxex/torch_wrapper.py           forward        30: self.net.init_sequence(batch_size)
-            <sitepkg>/torch/nn/modules/module.py  __getattr__  1177: raise AttributeError("'{}' object has no attribute '{}'".format(
-        AttributeError: 'DNC' object has no attribute 'init_sequence'
-
-        During handling of the above exception, another exception occurred:
-
-        Aliases for entries in sys.path:
-            <sitepkg>: /home/lsaldyt/.cache/pypoetry/virtualenvs/exps-1RFBYMgc-py3.9/lib/python3.9/site-packages
-            <pwd>    : /home/lsaldyt/hierarchical_neural_synthesis
-            <p0>     : /home/lsaldyt/jaxex
-        Traceback (most recent call last):
-            <pwd>/main.py                            <module>      36: main(sys.argv[1:])
-            <pwd>/main.py                            main          31: registry.run(name)
-            <p0>/jaxex/registry.py                   run           13: return self.experiments[name].run()
-            <p0>/jaxex/tensor_net_experiment.py      run           98: self.loop(self.settings.repeats, self.settings.epochs, train_loader, kind='train')
-            <p0>/jaxex/tensor_net_experiment.py      loop          41: metrics = model.step(x, y)
-            <p0>/jaxex/torch_wrapper.py              step          52: y_out = self.forward(x, y)
-            <p0>/jaxex/torch_wrapper.py              forward       41: return self.net(x)
-            <sitepkg>/torch/nn/modules/module.py     _call_impl  1102: return forward_call(*input, **kwargs)
-            <pwd>/baselines/dnc/Models/DNC.py        forward      555: out_tsteps.append(self._step(in_data[:,t], debug))
-            <pwd>/baselines/dnc/Models/DNC.py        _step        505: control_data = self.controller(torch.cat([in_data, prev_read_data], -1))
-            <sitepkg>/torch/nn/modules/module.py     _call_impl  1102: return forward_call(*input, **kwargs)
-            <pwd>/baselines/dnc/Models/DNC.py        forward      675: return self.model(data)
-            <sitepkg>/torch/nn/modules/module.py     _call_impl  1102: return forward_call(*input, **kwargs)
-            <sitepkg>/torch/nn/modules/container.py  forward      141: input = module(input)
-            <sitepkg>/torch/nn/modules/module.py     _call_impl  1102: return forward_call(*input, **kwargs)
-            <sitepkg>/torch/nn/modules/linear.py     forward      103: return F.linear(input, self.weight, self.bias)
-            <sitepkg>/torch/nn/functional.py         linear      1848: return torch._C._nn.linear(input, weight, bias)
-        RuntimeError: mat1 and mat2 shapes cannot be multiplied (256x137 and 146x32)
-        '''
         self.write_head.new_sequence()
         self.read_head.new_sequence()
         self.temporal_link.new_sequence()
@@ -598,8 +559,9 @@ class DNC(torch.nn.Module):
         return torch.stack(out_tsteps, dim=1 if self.batch_first else 0)
 
 class LSTMController(torch.nn.Module):
-    def __init__(self, layer_sizes, out_from_all_layers=True):
+    def __init__(self, input_size, layer_sizes, out_from_all_layers=True):
         super(LSTMController, self).__init__()
+        self.input_size = input_size
         self.out_from_all_layers = out_from_all_layers
         self.layer_sizes = layer_sizes
         self.states = None
@@ -609,7 +571,23 @@ class LSTMController(torch.nn.Module):
         self.states = [None] * len(self.layer_sizes)
         self.outputs = [None] * len(self.layer_sizes)
 
-    def reset_parameters(self):
+    def init(self):
+        self.layer_sizes = self.layer_sizes
+
+        # Xavier init: input to all gates is layers_sizes[i-1] + layer_sizes[i] + input_size -> layer_size big.
+        # So use xavier init according to this.
+        self.input_sizes = [(self.layer_sizes[i - 1] if i>0 else 0) +
+                             self.layer_sizes[i] + self.input_size
+                            for i in range(len(self.layer_sizes))]
+        self.stdevs = [math.sqrt(2.0 / (self.layer_sizes[i] + self.input_sizes[i])) for i in range(len(self.layer_sizes))]
+        self.in_to_all= [torch.nn.Linear(self.input_size, 4*self.layer_sizes[i]) for i in range(len(self.layer_sizes))]
+        self.out_to_all = [torch.nn.Linear(self.layer_sizes[i], 4 * self.layer_sizes[i], bias=False) for i in range(len(self.layer_sizes))]
+        self.prev_to_all = [torch.nn.Linear(self.layer_sizes[i-1], 4 * self.layer_sizes[i], bias=False) for i in range(1,len(self.layer_sizes))]
+
+        self._add_modules("in_to_all", self.in_to_all)
+        self._add_modules("out_to_all", self.out_to_all)
+        self._add_modules("prev_to_all", self.prev_to_all)
+
         def init_layer(l, index):
             size = self.layer_sizes[index]
             # Initialize all matrices to sigmoid, just data input to tanh
@@ -633,24 +611,6 @@ class LSTMController(torch.nn.Module):
         for i, m in enumerate(m_list):
             self.add_module("%s_%d" % (name,i), m)
 
-    def init(self, input_size):
-        self.layer_sizes = self.layer_sizes
-
-        # Xavier init: input to all gates is layers_sizes[i-1] + layer_sizes[i] + input_size -> layer_size big.
-        # So use xavier init according to this.
-        self.input_sizes = [(self.layer_sizes[i - 1] if i>0 else 0) + 
-                             self.layer_sizes[i] + input_size
-                            for i in range(len(self.layer_sizes))]
-        self.stdevs = [math.sqrt(2.0 / (self.layer_sizes[i] + self.input_sizes[i])) for i in range(len(self.layer_sizes))]
-        self.in_to_all= [torch.nn.Linear(input_size, 4*self.layer_sizes[i]) for i in range(len(self.layer_sizes))]
-        self.out_to_all = [torch.nn.Linear(self.layer_sizes[i], 4 * self.layer_sizes[i], bias=False) for i in range(len(self.layer_sizes))]
-        self.prev_to_all = [torch.nn.Linear(self.layer_sizes[i-1], 4 * self.layer_sizes[i], bias=False) for i in range(1,len(self.layer_sizes))]
-
-        self._add_modules("in_to_all", self.in_to_all)
-        self._add_modules("out_to_all", self.out_to_all)
-        self._add_modules("prev_to_all", self.prev_to_all)
-
-        self.reset_parameters()
 
     def get_output_size(self):
         return sum(self.layer_sizes) if self.out_from_all_layers else self.layer_sizes[-1]
@@ -679,33 +639,29 @@ class LSTMController(torch.nn.Module):
 
 
 class FeedforwardController(torch.nn.Module):
-    def __init__(self, layer_sizes=[]):
+    def __init__(self, input_size, layer_sizes=[]):
         super(FeedforwardController, self).__init__()
+        self.input_size = input_size
         self.layer_sizes = layer_sizes
+        # Xavier init: input to all gates is layers_sizes[i-1] + layer_sizes[i] + input_size -> layer_size big.
+        # So use xavier init according to this.
+        self.input_sizes = [self.input_size] + self.layer_sizes[:-1]
+        layers = []
+        for i, size in enumerate(self.layer_sizes):
+            layers.append(torch.nn.Linear(self.input_sizes[i], self.layer_sizes[i]))
+            layers.append(torch.nn.ReLU())
+        self.model = torch.nn.Sequential(*layers)
 
     def new_sequence(self):
         pass
 
-    def reset_parameters(self):
+    def init(self):
         for module in self.model:
             if isinstance(module, torch.nn.Linear):
                 linear_reset(module, gain=init.calculate_gain("relu"))
 
     def get_output_size(self):
         return self.layer_sizes[-1]
-
-    def init(self, input_size):
-        self.layer_sizes = self.layer_sizes
-
-        # Xavier init: input to all gates is layers_sizes[i-1] + layer_sizes[i] + input_size -> layer_size big.
-        # So use xavier init according to this.
-        self.input_sizes = [input_size] + self.layer_sizes[:-1]
-        layers = []
-        for i, size in enumerate(self.layer_sizes):
-            layers.append(torch.nn.Linear(self.input_sizes[i], self.layer_sizes[i]))
-            layers.append(torch.nn.ReLU())
-        self.model = torch.nn.Sequential(*layers)
-        self.reset_parameters()
 
     def forward(self, data):
         return self.model(data)
